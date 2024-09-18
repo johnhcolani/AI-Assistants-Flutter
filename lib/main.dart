@@ -1,7 +1,10 @@
 import 'package:ai_assistant/ai_assitant_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load();
+  print(dotenv.env['API_KEY']); // Add this line
   runApp(const MyApp());
 }
 
