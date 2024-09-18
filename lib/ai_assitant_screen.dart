@@ -11,16 +11,16 @@ class AIAssistantScreen extends StatefulWidget {
   _AIAssistantScreenState createState() => _AIAssistantScreenState();
 }
 
-class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTickerProviderStateMixin {
+class _AIAssistantScreenState extends State<AIAssistantScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
   AIAssistantService _aiAssistantService = AIAssistantService();
   File? _selectedImage;
-  String? _imageAnalysisResult; // Store image analysis result
-  bool _isTyping = false; // Track if AI is typing
-  String _aiTypingText = ''; // To display AI typing effect
-  String _thinkingDots = ''; // For showing the thinking dots
+  String? _imageAnalysisResult;
+  bool _isTyping = false;
+  String _aiTypingText = '';
+  String _thinkingDots = '';
 
   @override
   void initState() {
@@ -38,7 +38,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     super.dispose();
   }
 
-  // Add welcome message
   void _addWelcomeMessage() {
     setState(() {
       _messages.add({
@@ -48,7 +47,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     });
   }
 
-  // Scroll to bottom of the ListView
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -59,34 +57,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     }
   }
 
-  // Helper function to detect language and return appropriate text style
-  TextStyle getTextStyle(String text) {
-    if (_isChinese(text)) {
-      return TextStyle(fontFamily: 'NotoSansSC', fontSize: 18);
-    } else if (_isArabic(text) || _isTurkish(text)) {
-      return TextStyle(fontFamily: 'NotoSans', fontSize: 18); // Use a general NotoSans font
-    } else {
-      // Default to NotoSans for other languages
-      return TextStyle(fontFamily: 'NotoSans', fontSize: 18);
-    }
-  }
-
-  bool _isChinese(String text) {
-    return RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
-  }
-
-  bool _isArabic(String text) {
-    return RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]').hasMatch(text);
-  }
-
-  bool _isTurkish(String text) {
-    return RegExp(r'[şŞıİçÇğĞöÖüÜ]').hasMatch(text);
-  }
-
-
-
-
-  // Pick an image and start analysis
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -96,19 +66,17 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
         _selectedImage = File(image.path);
         _messages.add({
           'role': 'user',
-          'content': '[Image uploaded]', // Placeholder text
+          'content': '[Image uploaded]',
           'image': _selectedImage?.path,
-          'isUploading': true, // Track individual upload state
+          'isUploading': true,
         });
       });
 
-      // Analyze the image using Imagga API
       String imageAnalysis = await analyzeImage(_selectedImage!);
 
-      // Store the image analysis for future use, update the message's upload state
       setState(() {
-        _imageAnalysisResult = imageAnalysis; // Store the result for later AI use
-        _messages[_messages.length - 1]['isUploading'] = false; // Update the message's upload state
+        _imageAnalysisResult = imageAnalysis;
+        _messages[_messages.length - 1]['isUploading'] = false;
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -117,10 +85,9 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     }
   }
 
-  // Analyze the image with Imagga API
   Future<String> analyzeImage(File imageFile) async {
-    final String apiKey = "acc_6f050ab089fd18c"; // Replace with your API key
-    final String apiSecret = "4a49ffaac672d5223520cc1016b4a871"; // Replace with your API secret
+    final String apiKey = "acc_6f050ab089fd18c";
+    final String apiSecret = "4a49ffaac672d5223520cc1016b4a871";
     final String apiUrl = "https://api.imagga.com/v2/tags";
 
     var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
@@ -151,7 +118,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     }
   }
 
-  // Send message and incorporate image analysis if available
   Future<void> _sendMessage() async {
     String userMessage = _controller.text;
     setState(() {
@@ -160,16 +126,14 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom(); // Scroll to the bottom after sending a message
+      _scrollToBottom();
     });
 
-    // Show thinking dots animation
     setState(() {
-      _isTyping = true; // Set AI as typing
-      _thinkingDots = ''; // Reset the thinking dots
+      _isTyping = true;
+      _thinkingDots = '';
     });
 
-    // Show thinking animation for 2 seconds before starting to type the response
     for (int i = 0; i < 3; i++) {
       await Future.delayed(Duration(milliseconds: 500), () {
         setState(() {
@@ -178,7 +142,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
       });
     }
 
-    // Send user question along with image analysis if available
     String aiResponse;
     if (_imageAnalysisResult != null) {
       aiResponse = await _aiAssistantService.getAIResponse(
@@ -189,45 +152,52 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
       aiResponse = await _aiAssistantService.getAIResponse(userMessage, isFirstInteraction: false);
     }
 
-    // Start typing effect
     _startTypingEffect(aiResponse);
   }
 
-  // Typing effect function to display AI response character by character
   void _startTypingEffect(String aiResponse) async {
     setState(() {
-      _isTyping = true; // Set AI as typing
-      _aiTypingText = ''; // Start with empty text
-      _thinkingDots = ''; // Clear the thinking dots
+      _isTyping = true;
+      _aiTypingText = '';
+      _thinkingDots = '';
     });
 
-    // Simulate typing by adding one character at a time
     for (int i = 0; i < aiResponse.length; i++) {
-      await Future.delayed(Duration(milliseconds: 50)); // Delay between characters
+      await Future.delayed(Duration(milliseconds: 50));
       setState(() {
-        _aiTypingText += aiResponse[i]; // Add one character at a time
+        _aiTypingText += aiResponse[i];
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
     }
 
-    // After typing effect finishes, mark AI as no longer typing and store the response
     setState(() {
       _isTyping = false;
       _messages.add({'role': 'assistant', 'content': _aiTypingText});
-      _aiTypingText = ''; // Clear the temporary text
+      _aiTypingText = '';
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom(); // Scroll to the bottom after AI response
+      _scrollToBottom();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('AI Assistant')),
+      appBar: AppBar(
+        title: Text('AI Assistant'),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.cyanAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Padding(
@@ -235,93 +205,113 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
           child: Column(
             children: [
               Expanded(
-                child: DefaultTextStyle(
-                  style: TextStyle(fontFamily: 'NotoSans', fontSize: 18), // Default font for the entire chat area
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _messages.length + (_isTyping ? 1 : 0), // Add extra item for typing effect
-                    itemBuilder: (context, index) {
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: _messages.length + (_isTyping ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _messages.length && _isTyping) {
+                      return _buildTypingIndicator();
+                    }
 
-                      if (index == _messages.length && _isTyping) {
-                        // Show thinking dots or typing indicator
-                        return Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(10),
-                          margin: EdgeInsets.symmetric(vertical: 5),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: MediaQuery.of(context).size.width, // Full width for AI response
-                                height: 100, // Set specific height for the card
-                                decoration: BoxDecoration(
-                                  color: Colors.green[100],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _thinkingDots.isEmpty ? _aiTypingText : _thinkingDots,
-                                    style: getTextStyle(_thinkingDots.isEmpty ? _aiTypingText : _thinkingDots),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                    final message = _messages[index];
+                    bool isUser = message['role'] == 'user';
 
-                      final message = _messages[index];
-                      bool isUser = message['role'] == 'user';
+                    if (message.containsKey('image')) {
+                      return _buildImageCard(message, isUser);
+                    }
 
-                      // Show uploaded image for user instead of text if available
-                      if (message.containsKey('image')) {
-                        return Align(
-                          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Container(
-                            padding: EdgeInsets.all(10),
-                            margin: EdgeInsets.symmetric(vertical: 5),
-                            child: message['isUploading']
-                                ? Container(
-                              width: MediaQuery.of(context).size.width * 0.75, // Three-quarters of the screen
-                              height: 200, // Adjust the height as needed
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: CircularProgressIndicator(), // Show progress indicator for image upload
-                              ),
-                            )
-                                : Image.file(
-                              File(message['image']!),
-                              width: MediaQuery.of(context).size.width * 0.75, // Three-quarters of the screen
-                              height: 200, // Adjust the height as needed
-                            ),
-                          ),
-                        );
-                      }
-
-                      // Display user and assistant messages
-                      return Align(
-                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          padding: EdgeInsets.all(10),
-                          margin: EdgeInsets.symmetric(vertical: 5),
-                          decoration: BoxDecoration(
-                            color: isUser ? Colors.blue[100] : Colors.green[100],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            message['content'] ?? '',
-                            style: getTextStyle(message['content'] ?? ''),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    return _buildMessageCard(message, isUser);
+                  },
                 ),
               ),
-
               _buildTextInputArea(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(10),
+      margin: EdgeInsets.symmetric(vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.green[100],
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Text(
+        _thinkingDots.isEmpty ? _aiTypingText : _thinkingDots,
+        style: TextStyle(fontSize: 18),
+      ),
+    );
+  }
+
+  Widget _buildImageCard(Map<String, dynamic> message, bool isUser) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: EdgeInsets.all(10),
+        margin: EdgeInsets.symmetric(vertical: 5),
+        decoration: BoxDecoration(
+          color: isUser ? Colors.blue[50] : Colors.green[50],
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: message['isUploading']
+            ? Container(
+          width: MediaQuery.of(context).size.width * 0.75,
+          height: 200,
+          color: Colors.grey[300],
+          child: Center(child: CircularProgressIndicator()),
+        )
+            : Image.file(
+          File(message['image']!),
+          width: MediaQuery.of(context).size.width * 0.75,
+          height: 200,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageCard(Map<String, dynamic> message, bool isUser) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: EdgeInsets.all(20),
+        margin: EdgeInsets.symmetric(vertical: 5),
+        decoration: BoxDecoration(
+          gradient: isUser
+              ? LinearGradient(colors: [Colors.blue[100]!, Colors.blue[300]!])
+              : LinearGradient(colors: [Colors.green[100]!, Colors.green[300]!]),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            isUser ? Icon(Icons.person, color: Colors.blueAccent) : Icon(Icons.android, color: Colors.green),
+            SizedBox(height: 5),
+            Text(
+              message['content'] ?? '',
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ],
         ),
       ),
     );
@@ -333,15 +323,15 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.photo),
+            icon: Icon(Icons.photo, color: Colors.blueAccent),
             onPressed: _pickImage,
           ),
           Expanded(
             child: TextField(
               controller: _controller,
-              minLines: 1, // Minimum number of lines to display
-              maxLines: 5, // Maximum number of lines to display
-              style: TextStyle(fontFamily: 'NotoSans', fontSize: 18),
+              minLines: 1,
+              maxLines: 5,
+              style: TextStyle(fontSize: 18),
               decoration: InputDecoration(
                 hintText: 'Type your message...',
                 border: OutlineInputBorder(
@@ -349,12 +339,12 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey[300],
+                fillColor: Colors.grey[200],
               ),
             ),
           ),
           IconButton(
-            icon: Icon(Icons.send),
+            icon: Icon(Icons.send, color: Colors.blueAccent),
             onPressed: _sendMessage,
           ),
         ],
